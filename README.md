@@ -8,3 +8,4 @@ The Azure resources are split into modules, to allow reusability. Parameter file
 # Pipeline
 The pipelines are set up in azure devops, with two enviroments prod and dev
 secure pipeline objects to be stored in variable groups, to ensure secrets are not kept in plain text
+by using service connections and environments for dev and prod env, we can use a blue-green deployment strategy

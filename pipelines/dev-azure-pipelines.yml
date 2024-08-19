@@ -1,0 +1,119 @@
+trigger: none # amend trigger accordingly
+
+
+pool:
+  vmImage: ubuntu-latest
+
+parameters:
+  - name: Environment
+    type: string
+    default: DEV 
+  - name: ServiceConnection
+    type: string
+    default: DEV 
+  - name: Location
+    type: string
+    values:
+    - uksouth
+    - ukwest
+    default: uksouth 
+  - name: ResourceGroupName
+    type: string
+    default: 'rg-swapp-dev' # When running pipeline, insert Resource Group Name
+  - name: templateFile
+    type: string
+    default: 'infra\main.bicep' # Insert file path to bicep file
+  - name: templateParameters
+    type: string
+    default: '' # Insert file path to parameter file
+
+#variables:
+  #- group: # insert name of variable group to reference variables
+  
+
+stages:
+
+#Linting Bicep stage
+- stage: Lint
+  jobs:
+  - job: LintCode
+    displayName: Lint code
+    continueOnError: false
+    steps:
+      - script: | 
+          az bicep build --file ${{ parameters.templateFile }}
+        name: LintBicepCode
+        displayName: Run Bicep linter
+
+#Validate Code against environment stage
+- stage: Validate 
+  jobs:
+  - job: ValidateBicepCode
+    displayName: Validate Bicep code
+    continueOnError: false
+    # variables:
+    steps:
+      - task: AzureResourceManagerTemplateDeployment@3
+        name: RunPreflightValidation
+        displayName: Run preflight validation
+        inputs:
+          connectedServiceName: ${{ parameters.ServiceConnection }}
+          resourceGroupName: ${{ parameters.ResourceGroupName }}
+          templateLocation: 'Linked artifact'
+          location: ${{ parameters.Location }}
+          deploymentMode: Validation
+          csmFile: ${{ parameters.templateFile }} 
+          csmParametersFile: ${{ parameters.templateParameters }}
+          #overrideParameters: > # Insert necessary parameters 
+
+           
+# Preview resource updates/changes stage
+- stage: Preview_Whatif
+  jobs:
+  - job: whatifTestBicepTemplate
+    continueOnError: false
+    # variables:
+    steps:
+    - task: AzureCLI@2
+      displayName: What if Test Bicep Template 
+      continueOnError: false
+      inputs:
+        azureSubscription: ${{ parameters.ServiceConnection }}
+        scriptType: 'bash'
+        scriptLocation: inlineScript
+        inlineScript: |
+          az deployment group what-if \
+            --resource-group ${{ parameters.ResourceGroupName }} \
+            --template-file ${{ parameters.templateFile }} \
+            --parameters ${{ parameters.templateParameters }}
+
+
+#Deployment stage
+- stage: Deploy
+  dependsOn: 
+  - Preview_Whatif 
+  - Validate
+  - Lint
+  jobs:
+  - deployment: Deploy_Bicep
+    environment: ${{ parameters.Environment }}
+    continueOnError: false
+    # variables:
+    strategy:
+      runOnce:    
+        deploy: 
+          steps:
+            - checkout: self
+            - task: AzureResourceManagerTemplateDeployment@3
+              name: DeployBicepFile
+              displayName: Deploy Bicep file
+              inputs:
+                connectedServiceName: ${{ parameters.ServiceConnection }}
+                action: 'Create Or Update Resource Group'
+                templateLocation: 'Linked artifact'
+                location: ${{ parameters.Location }}
+                resourceGroupName: ${{ parameters.ResourceGroupName }}
+                csmFile: ${{ parameters.templateFile }}
+                deploymentMode: 'Incremental' 
+                csmParametersFile: ${{ parameters.templateParameters }}
+                overrideParameters: > # Insert necessary parameters 

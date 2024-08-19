@@ -39,3 +39,4 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 //Outputs
+output saHostnameResourceID string = storageAccount.id

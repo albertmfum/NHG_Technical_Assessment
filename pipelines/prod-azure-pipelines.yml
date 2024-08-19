@@ -26,7 +26,7 @@ parameters:
     default: 'infra\main.bicep' # Insert file path to bicep file
   - name: templateParameters
     type: string
-    default: '' # Insert file path to parameter file
+    default: 'infra\main.bicepparam' # Insert file path to parameter file
 
 #variables:
   #- group: # insert name of variable group to reference variables

@@ -1,6 +1,6 @@
 //Parameters, tbo in paramaters file
 param endpointName string
-param originURL string
+param originURL string //*TODO*
 param profileName string
 param saName string
 param wappName string

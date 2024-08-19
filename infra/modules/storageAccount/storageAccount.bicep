@@ -38,5 +38,19 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: saSku
   }
 }
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+  name: 'default'
+  parent: storageAccount 
+}
+
+resource webContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: '$web'
+  parent: blobService
+  properties: {
+    publicAccess: 'Blob'
+  }
+}
+
 //Outputs
 output saHostnameResourceID string = storageAccount.id
